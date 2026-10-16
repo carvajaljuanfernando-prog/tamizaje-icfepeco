@@ -1,0 +1,613 @@
+<title>Tamizaje ICFEp Obesidad</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: una sola columna de trabajo (max 980px), secciones numeradas en el orden real de la jornada
+   (encuesta → eco → resultado); barra fija inferior con los dos puntajes para verlos mientras se mide. */
+:root{
+  --bg:#0D2B45; --panel:#12365a; --panel2:#0a2238; --line:#24507a;
+  --fg:#e8eef5; --muted:#9fb4c9; --accent:#C4923A; --accent-fg:#1a1200;
+  --ok:#3fb27f; --warn:#e0a63a; --bad:#e06a5c; --info:#5aa9e6;
+  --display:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#f3f5f8; --panel:#ffffff; --panel2:#e9eef4; --line:#c9d4e0; --fg:#0D2B45; --muted:#4e6a86;
+  --accent:#a3741f; --accent-fg:#fff; --ok:#1f8a5a; --warn:#b07a12; --bad:#c2473a; --info:#2a6fb0; color-scheme:light; } }
+:root[data-theme="light"]{
+  --bg:#f3f5f8; --panel:#ffffff; --panel2:#e9eef4; --line:#c9d4e0; --fg:#0D2B45; --muted:#4e6a86;
+  --accent:#a3741f; --accent-fg:#fff; --ok:#1f8a5a; --warn:#b07a12; --bad:#c2473a; --info:#2a6fb0; color-scheme:light; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--display);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 110px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:2px solid var(--accent);padding-bottom:10px}
+h1{font-size:1.45rem;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.9rem;margin:2px 0 0}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{margin:0;font-size:1.05rem;display:flex;align-items:baseline;gap:10px}
+h2 .n{font-family:var(--mono);color:var(--accent);font-size:.85rem}
+h3{margin:4px 0 0;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
+.grid.wide{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:.8rem;color:var(--muted)}
+.f .u{font-family:var(--mono);font-size:.72rem;color:var(--accent)}
+input,select,textarea{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 9px;font:inherit;font-family:var(--mono);font-size:.95rem;min-width:0}
+textarea{font-family:var(--display);min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.calc{background:transparent;border-style:dashed;color:var(--accent);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.88rem;user-select:none}
+.chip input{width:auto;margin:0;accent-color:var(--accent)}
+.chip:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
+.seg{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg label{flex:1;text-align:center;padding:7px 6px;cursor:pointer;font-size:.85rem;border-right:1px solid var(--line);background:var(--panel2)}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;width:0;height:0}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-fg);font-weight:600}
+.note{font-size:.8rem;color:var(--muted)}
+.flag{font-family:var(--mono);font-size:.74rem;padding:2px 7px;border-radius:4px;display:inline-block}
+.flag.maj{background:var(--bad);color:#fff}.flag.min{background:var(--warn);color:#1a1200}.flag.n{background:var(--line);color:var(--fg)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-weight:600;border-radius:7px;padding:9px 14px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);cursor:pointer}
+button.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.danger{color:var(--bad)}
+button:hover{filter:brightness(1.08)}
+.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.score{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.score .big{font-family:var(--mono);font-size:2rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.score .cat{font-weight:600}
+.cat.low{color:var(--ok)}.cat.mid{color:var(--warn)}.cat.high{color:var(--bad)}
+.breakdown{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.breakdown b{color:var(--fg);font-family:var(--mono)}
+.verdict{border-left:4px solid var(--accent);background:var(--panel2);padding:12px 14px;border-radius:6px}
+.verdict strong{display:block;margin-bottom:4px}
+pre.out{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:var(--mono);font-size:.8rem;white-space:pre-wrap;overflow-x:auto;margin:0;max-height:320px;overflow-y:auto}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td button{padding:3px 8px;font-size:.75rem}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:2px solid var(--accent);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px calc(8px + env(safe-area-inset-bottom,0px))}
+.bar .in{max-width:980px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+.bar .k{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.bar .v{font-family:var(--mono);font-weight:600;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));background:var(--accent);color:var(--accent-fg);padding:8px 14px;border-radius:6px;font-weight:600;z-index:30;opacity:0;transition:opacity .2s}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Jornada de tamizaje · Ecocardioscopia dirigida</div>
+    <h1>Tamizaje de insuficiencia cardíaca con FE preservada en obesidad</h1>
+    <p class="sub">Registro estructurado · puntajes H<sub>2</sub>FPEF y HFA-PEFF (dominio ecocardiográfico) calculados en tiempo real</p>
+  </div>
+  <div class="row">
+    <button type="button" id="btnNuevo">Nuevo paciente</button>
+  </div>
+</header>
+
+<form id="form" autocomplete="off">
+
+<section>
+  <h2><span class="n">1</span> Identificación y antropometría</h2>
+  <div class="grid wide">
+    <div class="f"><label for="nombre">Nombre</label><input id="nombre"></div>
+    <div class="f"><label for="doc">Documento / código</label><input id="doc"></div>
+    <div class="f"><label for="tel">Teléfono de contacto</label><input id="tel" inputmode="tel"></div>
+    <div class="f"><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+    <div class="f"><label for="medico">Médico que realiza</label><input id="medico"></div>
+  </div>
+  <div class="grid">
+    <div class="f"><label for="edad">Edad <span class="u">años</span></label><input id="edad" type="number" inputmode="numeric" min="18" max="110"></div>
+    <div class="f"><label>Sexo</label>
+      <div class="seg"><label><input type="radio" name="sexo" id="sexoF" value="F">Femenino</label><label><input type="radio" name="sexo" id="sexoM" value="M">Masculino</label></div></div>
+    <div class="f"><label for="peso">Peso <span class="u">kg</span></label><input id="peso" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="talla">Talla <span class="u">cm</span></label><input id="talla" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="imc">IMC <span class="u">kg/m²</span></label><input id="imc" class="calc" readonly></div>
+    <div class="f"><label for="bsa">SC DuBois <span class="u">m²</span></label><input id="bsa" class="calc" readonly></div>
+    <div class="f"><label for="cintura">Perímetro abdominal <span class="u">cm</span></label><input id="cintura" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="pas">PA sistólica <span class="u">mmHg</span></label><input id="pas" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="pad">PA diastólica <span class="u">mmHg</span></label><input id="pad" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="fc">Frecuencia cardíaca <span class="u">lpm</span></label><input id="fc" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="spo2">SpO₂ <span class="u">%</span></label><input id="spo2" type="number" inputmode="numeric"></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span> Encuesta clínica de preselección</h2>
+  <h3>Síntomas</h3>
+  <div class="grid wide">
+    <div class="f"><label>Disnea de esfuerzo (NYHA)</label>
+      <div class="seg"><label><input type="radio" name="nyha" value="I">I</label><label><input type="radio" name="nyha" value="II">II</label><label><input type="radio" name="nyha" value="III">III</label><label><input type="radio" name="nyha" value="IV">IV</label></div></div>
+    <div class="f"><label for="tiempoSint">Tiempo de evolución de los síntomas <span class="u">meses</span></label><input id="tiempoSint" type="number" inputmode="numeric"></div>
+  </div>
+  <div class="chips">
+    <label class="chip"><input type="checkbox" id="ortopnea">Ortopnea</label>
+    <label class="chip"><input type="checkbox" id="dpn">Disnea paroxística nocturna</label>
+    <label class="chip"><input type="checkbox" id="edema">Edema de miembros inferiores</label>
+    <label class="chip"><input type="checkbox" id="fatiga">Fatiga / intolerancia al ejercicio</label>
+    <label class="chip"><input type="checkbox" id="palpit">Palpitaciones</label>
+    <label class="chip"><input type="checkbox" id="ronquido">Ronquido / apnea del sueño</label>
+  </div>
+  <h3>Antecedentes y tratamiento</h3>
+  <div class="chips">
+    <label class="chip"><input type="checkbox" id="hta">Hipertensión arterial</label>
+    <label class="chip"><input type="checkbox" id="dm">Diabetes mellitus</label>
+    <label class="chip"><input type="checkbox" id="fa">Fibrilación auricular (cualquier tipo)</label>
+    <label class="chip"><input type="checkbox" id="erc">Enfermedad renal crónica</label>
+    <label class="chip"><input type="checkbox" id="ecv">Enfermedad coronaria conocida</label>
+    <label class="chip"><input type="checkbox" id="saos">SAHOS diagnosticado</label>
+    <label class="chip"><input type="checkbox" id="diuretico">Usa diurético</label>
+  </div>
+  <div class="grid wide">
+    <div class="f"><label for="nAntiHTA">N.º de antihipertensivos</label>
+      <select id="nAntiHTA"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3 o más</option></select></div>
+    <div class="f"><label for="glp1">Tratamiento para obesidad</label>
+      <select id="glp1"><option value="">Ninguno</option><option>Agonista GLP-1 / tirzepatida</option><option>Otro farmacológico</option><option>Cirugía bariátrica</option></select></div>
+    <div class="f"><label>Signos a la exploración</label>
+      <div class="chips"><label class="chip"><input type="checkbox" id="ingurg">Ingurgitación yugular</label><label class="chip"><input type="checkbox" id="crepitos">Crépitos</label><label class="chip"><input type="checkbox" id="s3">Tercer ruido</label></div></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">3</span> Ecocardioscopia dirigida</h2>
+  <h3>Ventrículo izquierdo</h3>
+  <div class="grid">
+    <div class="f"><label for="fevi">FEVI (visual o Simpson) <span class="u">%</span></label><input id="fevi" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="sivd">SIV diástole <span class="u">mm</span></label><input id="sivd" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="ppd">Pared posterior <span class="u">mm</span></label><input id="ppd" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="dvid">DTDVI <span class="u">mm</span></label><input id="dvid" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="mvi">Masa VI (Devereux) <span class="u">g</span></label><input id="mvi" class="calc" readonly></div>
+    <div class="f"><label for="imvi">Índice de masa VI <span class="u">g/m²</span></label><input id="imvi" class="calc" readonly></div>
+    <div class="f"><label for="gpr">Grosor parietal relativo</label><input id="gpr" class="calc" readonly></div>
+    <div class="f"><label for="gls">Strain longitudinal global <span class="u">% (opcional)</span></label><input id="gls" type="number" inputmode="decimal" step="0.1"></div>
+  </div>
+  <h3>Función diastólica</h3>
+  <div class="grid">
+    <div class="f"><label for="ondaE">Onda E <span class="u">cm/s</span></label><input id="ondaE" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="ondaA">Onda A <span class="u">cm/s</span></label><input id="ondaA" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="ea">E/A</label><input id="ea" class="calc" readonly></div>
+    <div class="f"><label for="eSep">e' septal <span class="u">cm/s</span></label><input id="eSep" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="eLat">e' lateral <span class="u">cm/s</span></label><input id="eLat" type="number" inputmode="decimal" step="0.1"></div>
+    <div class="f"><label for="ee">E/e' promedio</label><input id="ee" class="calc" readonly></div>
+    <div class="f"><label for="lavol">Volumen AI <span class="u">mL</span></label><input id="lavol" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="lavi">VAI indexado <span class="u">mL/m²</span></label><input id="lavi" class="calc" readonly></div>
+  </div>
+  <h3>Presiones pulmonares y cavidades derechas</h3>
+  <div class="grid">
+    <div class="f"><label for="vit">Velocidad máx. IT <span class="u">m/s</span></label><input id="vit" type="number" inputmode="decimal" step="0.01"></div>
+    <div class="f"><label for="vci">Diámetro VCI <span class="u">mm</span></label><input id="vci" type="number" inputmode="numeric"></div>
+    <div class="f"><label>Colapso VCI</label>
+      <div class="seg"><label><input type="radio" name="colapso" value="si">&gt; 50 %</label><label><input type="radio" name="colapso" value="no">&lt; 50 %</label></div></div>
+    <div class="f"><label for="pad_est">PAD estimada <span class="u">mmHg</span></label><input id="pad_est" class="calc" readonly></div>
+    <div class="f"><label for="psap">PSAP estimada <span class="u">mmHg</span></label><input id="psap" class="calc" readonly></div>
+    <div class="f"><label for="tapse">TAPSE <span class="u">mm</span></label><input id="tapse" type="number" inputmode="numeric"></div>
+    <div class="f"><label for="vdbasal">VD basal <span class="u">mm</span></label><input id="vdbasal" type="number" inputmode="numeric"></div>
+  </div>
+  <h3>Otros hallazgos</h3>
+  <div class="chips">
+    <label class="chip"><input type="checkbox" id="derrame">Derrame pericárdico</label>
+    <label class="chip"><input type="checkbox" id="valvulo">Valvulopatía ≥ moderada</label>
+    <label class="chip"><input type="checkbox" id="alterSeg">Alteración segmentaria de la contractilidad</label>
+    <label class="chip"><input type="checkbox" id="lineasB">Líneas B pulmonares bilaterales</label>
+    <label class="chip"><input type="checkbox" id="malaVentana">Ventana acústica limitada</label>
+  </div>
+  <div class="f"><label for="obs">Observaciones</label><textarea id="obs"></textarea></div>
+</section>
+
+<section>
+  <h2><span class="n">4</span> Resultado del tamizaje</h2>
+  <div class="scores">
+    <div class="score">
+      <div class="eyebrow">H<sub>2</sub>FPEF (Reddy 2018)</div>
+      <div class="big"><span id="h2Total">–</span><span class="note"> / 9</span></div>
+      <div class="cat" id="h2Cat">Faltan datos</div>
+      <div class="breakdown" id="h2Break"></div>
+    </div>
+    <div class="score">
+      <div class="eyebrow">HFA-PEFF · dominio ecocardiográfico</div>
+      <div class="big"><span id="hfaTotal">–</span><span class="note"> / 4</span></div>
+      <div class="cat" id="hfaCat">Faltan datos</div>
+      <div class="breakdown" id="hfaBreak"></div>
+      <div class="note">Sin péptidos natriuréticos: el puntaje total HFA-PEFF (0–6) se completa con NT-proBNP.</div>
+    </div>
+  </div>
+  <div class="f"><label>Clasificación final</label>
+    <div class="seg"><label><input type="radio" name="clasif" value="auto" checked>Automática</label><label><input type="radio" name="clasif" value="baja">Baja probabilidad</label><label><input type="radio" name="clasif" value="intermedia">Intermedia</label><label><input type="radio" name="clasif" value="alta">Alta probabilidad</label></div></div>
+  <div class="verdict" id="verdict"><strong>Clasificación pendiente</strong>Complete edad, IMC, E/e' y velocidad de IT para que la herramienta clasifique.</div>
+  <div class="f"><label for="plan">Conducta</label>
+    <select id="plan">
+      <option value="">Según clasificación</option>
+      <option>Alta de la jornada con recomendaciones de estilo de vida</option>
+      <option>NT-proBNP + ecocardiograma completo ambulatorio</option>
+      <option>Remisión a consulta de cardiología / clínica de falla cardíaca</option>
+      <option>Remisión prioritaria (hallazgo inesperado)</option>
+    </select></div>
+  <div class="row">
+    <button type="button" class="pri" id="btnPdf">Descargar PDF</button>
+    <button type="button" id="btnCopiar">Copiar informe</button>
+    <button type="button" id="btnGuardar">Guardar en registro</button>
+  </div>
+  <pre class="out" id="out"></pre>
+</section>
+
+</form>
+
+<section>
+  <h2><span class="n">5</span> Registro de la jornada <span class="note" id="regCount"></span></h2>
+  <div class="tablewrap"><table id="regTable"><thead><tr><th>Fecha</th><th>Nombre</th><th>Documento</th><th>Edad</th><th>IMC</th><th>H2FPEF</th><th>HFA-eco</th><th>Clasif.</th><th></th></tr></thead><tbody></tbody></table></div>
+  <div class="row">
+    <button type="button" id="btnCsv">Copiar CSV</button>
+    <button type="button" id="btnCsvDl">Descargar CSV</button>
+    <button type="button" class="danger" id="btnLimpiar">Vaciar registro</button>
+  </div>
+  <p class="note">Los registros quedan guardados solo en este dispositivo (navegador). «Abrir» recarga el formato del paciente para revisarlo o volver a descargar su PDF.</p>
+</section>
+</div>
+
+<div class="bar"><div class="in">
+  <div><span class="k">H2FPEF </span><span class="v" id="barH2">–</span><span class="k"> /9</span></div>
+  <div><span class="k">HFA-PEFF eco </span><span class="v" id="barHfa">–</span><span class="k"> /4</span></div>
+  <div><span class="k">E/e' </span><span class="v" id="barEe">–</span></div>
+  <div><span class="k">PSAP </span><span class="v" id="barPsap">–</span></div>
+  <div><span class="k">Clasif. </span><span class="v" id="barCat">–</span></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:null};
+const chk=id=>$(id).checked;
+const radio=n=>{const r=document.querySelector(`input[name="${n}"]:checked`);return r?r.value:null};
+const fmt=(v,d=1)=>v==null?'':(+v).toFixed(d);
+const KEY='tamizaje_icfep_registros';
+
+function calc(){
+  const edad=num('edad'),peso=num('peso'),talla=num('talla'),sexo=radio('sexo');
+  const imc=(peso&&talla)?peso/Math.pow(talla/100,2):null;
+  const bsa=(peso&&talla)?0.007184*Math.pow(peso,0.425)*Math.pow(talla,0.725):null;
+  $('imc').value=fmt(imc); $('bsa').value=fmt(bsa,2);
+
+  const siv=num('sivd'),pp=num('ppd'),dd=num('dvid');
+  let mvi=null,imvi=null,gpr=null;
+  if(siv&&pp&&dd){
+    const s=siv/10,p=pp/10,d=dd/10;
+    mvi=0.8*1.04*(Math.pow(s+p+d,3)-Math.pow(d,3))+0.6;
+    gpr=2*p/d;
+    if(bsa)imvi=mvi/bsa;
+  }
+  $('mvi').value=fmt(mvi,0);$('imvi').value=fmt(imvi,0);$('gpr').value=fmt(gpr,2);
+
+  const E=num('ondaE'),A=num('ondaA'),es=num('eSep'),el=num('eLat');
+  const ea=(E&&A)?E/A:null;
+  let eavg=null; if(es&&el)eavg=(es+el)/2; else if(es)eavg=es; else if(el)eavg=el;
+  const ee=(E&&eavg)?E/eavg:null;
+  $('ea').value=fmt(ea,2);$('ee').value=fmt(ee);
+
+  const lavol=num('lavol'); const lavi=(lavol&&bsa)?lavol/bsa:null; $('lavi').value=fmt(lavi,0);
+
+  const vit=num('vit'),vci=num('vci'),col=radio('colapso');
+  let padE=null; if(vci!=null&&col){padE=(vci<=21&&col==='si')?3:(vci>21&&col==='no')?15:8;}
+  const psap=vit?4*vit*vit+(padE??8):null;
+  $('pad_est').value=padE==null?'':padE; $('psap').value=fmt(psap,0);
+
+  // H2FPEF
+  const h2={}; let h2Missing=[];
+  h2.heavy = imc==null?null:(imc>30?2:0); if(imc==null)h2Missing.push('IMC');
+  h2.hyper = parseInt($('nAntiHTA').value)>=2?1:0;
+  h2.af = chk('fa')?3:0;
+  h2.ph = psap==null?null:(psap>35?1:0); if(psap==null)h2Missing.push('PSAP');
+  h2.elder = edad==null?null:(edad>60?1:0); if(edad==null)h2Missing.push('edad');
+  h2.fill = ee==null?null:(ee>9?1:0); if(ee==null)h2Missing.push("E/e'");
+  const h2Total=Object.values(h2).reduce((a,b)=>a+(b||0),0);
+  const h2Complete=h2Missing.length===0;
+  const prob=[20,30,40,55,70,80,90,95,97,98][h2Total];
+  const h2Cat=h2Total<=1?'low':h2Total<=5?'mid':'high';
+  const h2CatTxt={low:'Baja probabilidad',mid:'Probabilidad intermedia',high:'Alta probabilidad'}[h2Cat];
+  $('h2Total').textContent=h2Complete?h2Total:h2Total+'*';
+  $('h2Cat').className='cat '+(h2Complete?h2Cat:'');
+  $('h2Cat').textContent=h2Complete?`${h2CatTxt} · ≈${prob} %`:`Parcial · faltan: ${h2Missing.join(', ')}`;
+  $('h2Break').innerHTML=[
+    ['Heavy · IMC > 30',h2.heavy],['Hypertensive · ≥ 2 antihipertensivos',h2.hyper],['Atrial fibrillation',h2.af],
+    ['Pulmonary HTN · PSAP > 35',h2.ph],['Elder · > 60 años',h2.elder],["Filling pressure · E/e' > 9",h2.fill]
+  ].map(([k,v])=>`<span>${k}</span><b>${v==null?'?':v}</b>`).join('');
+
+  // HFA-PEFF echo domains
+  const fMaj = (es!=null&&es<7)||(el!=null&&el<10)||(ee!=null&&ee>=15)||(vit!=null&&vit>2.8);
+  const fMin = (ee!=null&&ee>=9&&ee<15)||(num('gls')!=null&&Math.abs(num('gls'))<16);
+  const lvmiMajCut = sexo==='F'?122:149, lvmiMinCut = sexo==='F'?95:115;
+  const mMaj = (lavi!=null&&lavi>34)||(imvi!=null&&sexo&&imvi>=lvmiMajCut&&gpr!=null&&gpr>0.42);
+  const mMin = (lavi!=null&&lavi>=29&&lavi<=34)||(imvi!=null&&sexo&&imvi>lvmiMinCut)||(gpr!=null&&gpr>0.42)||(siv!=null&&siv>=12)||(pp!=null&&pp>=12);
+  const fPts=fMaj?2:fMin?1:0, mPts=mMaj?2:mMin?1:0;
+  const hfaTotal=fPts+mPts;
+  const hfaMissing=[]; if(ee==null)hfaMissing.push("E/e'"); if(vit==null)hfaMissing.push('IT'); if(lavi==null)hfaMissing.push('VAI'); if(imvi==null)hfaMissing.push('masa VI'); if(!sexo)hfaMissing.push('sexo');
+  const hfaComplete=hfaMissing.length===0;
+  const hfaCat=hfaTotal>=4?'high':hfaTotal>=2?'mid':'low';
+  $('hfaTotal').textContent=hfaComplete?hfaTotal:hfaTotal+'*';
+  $('hfaCat').className='cat '+(hfaComplete?hfaCat:'');
+  $('hfaCat').textContent=hfaComplete?({high:'4 puntos: compatible con ICFEp aun sin biomarcador',mid:'2–3 puntos: intermedio, requiere NT-proBNP',low:'0–1 puntos: criterios eco no cumplidos'})[hfaCat]:`Parcial · faltan: ${hfaMissing.join(', ')}`;
+  const tag=(maj,min)=>maj?'<span class="flag maj">mayor · 2</span>':min?'<span class="flag min">menor · 1</span>':'<span class="flag n">0</span>';
+  $('hfaBreak').innerHTML=`<span>Funcional (e', E/e', IT, GLS)</span><b>${tag(fMaj,fMin)}</b><span>Morfológico (VAI, masa VI, GPR, grosor)</span><b>${tag(mMaj,mMin)}</b>`;
+
+  // Clasificación final
+  let auto=null;
+  if(h2Complete||hfaComplete){
+    const sym = radio('nyha')&&radio('nyha')!=='I' || chk('ortopnea')||chk('dpn')||chk('edema');
+    if(h2Cat==='high'||hfaTotal>=4) auto='alta';
+    else if(h2Cat==='mid'||hfaTotal>=2||(sym&&chk('diuretico'))) auto='intermedia';
+    else auto='baja';
+  }
+  const manual=radio('clasif'); const final= manual==='auto'?auto:manual;
+  const vTxt={
+    baja:['Baja probabilidad de ICFEp','Sin criterios ecocardiográficos ni clínicos suficientes. Recomendaciones de estilo de vida y control de factores de riesgo; reevaluar si aparecen síntomas.'],
+    intermedia:['Probabilidad intermedia de ICFEp','Solicitar NT-proBNP y ecocardiograma transtorácico completo ambulatorio (incluir strain y, si es posible, eco de esfuerzo diastólico). Control de peso y de PA.'],
+    alta:['Alta probabilidad de ICFEp','Remitir a consulta de cardiología / clínica de falla cardíaca. Solicitar NT-proBNP, ecocardiograma completo, ECG de 12 derivaciones y laboratorios (creatinina, HbA1c, perfil lipídico, ferritina). Evaluar candidatura a agonista GLP-1 / iSGLT2 según el especialista.']
+  };
+  const v=$('verdict');
+  if(final){ v.style.borderLeftColor=`var(--${final==='baja'?'ok':final==='intermedia'?'warn':'bad'})`; v.innerHTML=`<strong>${vTxt[final][0]}${manual!=='auto'?' (asignada manualmente)':''}</strong>${vTxt[final][1]}`; }
+  else { v.style.borderLeftColor='var(--accent)'; v.innerHTML='<strong>Clasificación pendiente</strong>Complete edad, IMC, E/e\' y velocidad de IT para que la herramienta clasifique.'; }
+
+  $('barH2').textContent=$('h2Total').textContent; $('barHfa').textContent=$('hfaTotal').textContent;
+  $('barEe').textContent=fmt(ee)||'–'; $('barPsap').textContent=psap?fmt(psap,0):'–'; $('barCat').textContent=final?final.charAt(0).toUpperCase()+final.slice(1):'–';
+
+  const state={edad,sexo,imc,bsa,mvi,imvi,gpr,ea,ee,lavi,padE,psap,h2,h2Total,h2Complete,prob,h2CatTxt,fMaj,fMin,mMaj,mMin,hfaTotal,hfaComplete,final,vTxt};
+  $('out').textContent=buildReport(state);
+  return state;
+}
+
+function buildReport(s){
+  const yes=l=>l.filter(([id])=>chk(id)).map(([,t])=>t).join(', ')||'ninguno';
+  const line=(k,v,u='')=>(v===null||v===undefined||v==='')?null:`${k}: ${v}${u}`;
+  const L=[];
+  L.push('TAMIZAJE ICFEp EN OBESIDAD – ECOCARDIOSCOPIA DIRIGIDA');
+  L.push(`Fecha: ${$('fecha').value||'—'}  |  ${$('nombre').value||'—'}  |  Doc: ${$('doc').value||'—'}  |  Tel: ${$('tel').value||'—'}`);
+  L.push('');
+  L.push('ANTROPOMETRÍA Y SIGNOS');
+  L.push([line('Edad',s.edad,' años'),line('Sexo',s.sexo),line('Peso',$('peso').value,' kg'),line('Talla',$('talla').value,' cm'),line('IMC',fmt(s.imc),' kg/m²'),line('SC',fmt(s.bsa,2),' m²'),line('Perímetro abdominal',$('cintura').value,' cm')].filter(Boolean).join('  |  '));
+  L.push([line('PA',$('pas').value&&$('pad').value?`${$('pas').value}/${$('pad').value}`:'',' mmHg'),line('FC',$('fc').value,' lpm'),line('SpO2',$('spo2').value,' %')].filter(Boolean).join('  |  '));
+  L.push('');
+  L.push('ENCUESTA CLÍNICA');
+  L.push(`NYHA: ${radio('nyha')||'—'}${$('tiempoSint').value?` (${$('tiempoSint').value} meses)`:''}  |  Síntomas: ${yes([['ortopnea','ortopnea'],['dpn','DPN'],['edema','edema MMII'],['fatiga','fatiga'],['palpit','palpitaciones'],['ronquido','ronquido/apnea']])}`);
+  L.push(`Antecedentes: ${yes([['hta','HTA'],['dm','DM'],['fa','FA'],['erc','ERC'],['ecv','enfermedad coronaria'],['saos','SAHOS']])}  |  Antihipertensivos: ${$('nAntiHTA').selectedOptions[0].text}  |  Diurético: ${chk('diuretico')?'sí':'no'}${$('glp1').value?`  |  Tto obesidad: ${$('glp1').value}`:''}`);
+  L.push(`Signos: ${yes([['ingurg','ingurgitación yugular'],['crepitos','crépitos'],['s3','S3']])}`);
+  L.push('');
+  L.push('ECOCARDIOSCOPIA');
+  L.push([line('FEVI',$('fevi').value,' %'),line('SIV',$('sivd').value,' mm'),line('PP',$('ppd').value,' mm'),line('DTDVI',$('dvid').value,' mm'),line('Masa VI',fmt(s.mvi,0),' g'),line('IMVI',fmt(s.imvi,0),' g/m²'),line('GPR',fmt(s.gpr,2)),line('GLS',$('gls').value,' %')].filter(Boolean).join('  |  '));
+  L.push([line('E',$('ondaE').value,' cm/s'),line('A',$('ondaA').value,' cm/s'),line('E/A',fmt(s.ea,2)),line("e' sept",$('eSep').value,' cm/s'),line("e' lat",$('eLat').value,' cm/s'),line("E/e' prom",fmt(s.ee)),line('Vol AI',$('lavol').value,' mL'),line('VAI',fmt(s.lavi,0),' mL/m²')].filter(Boolean).join('  |  '));
+  L.push([line('IT Vmáx',$('vit').value,' m/s'),line('VCI',$('vci').value,' mm'),line('Colapso',radio('colapso')==null?'':radio('colapso')==='si'?'>50 %':'<50 %'),line('PAD est.',s.padE,' mmHg'),line('PSAP est.',fmt(s.psap,0),' mmHg'),line('TAPSE',$('tapse').value,' mm'),line('VD basal',$('vdbasal').value,' mm')].filter(Boolean).join('  |  '));
+  const otros=yes([['derrame','derrame pericárdico'],['valvulo','valvulopatía ≥ moderada'],['alterSeg','alteración segmentaria'],['lineasB','líneas B bilaterales'],['malaVentana','ventana limitada']]);
+  if(otros!=='ninguno')L.push(`Otros hallazgos: ${otros}`);
+  if($('obs').value.trim())L.push(`Observaciones: ${$('obs').value.trim()}`);
+  L.push('');
+  L.push('PUNTAJES');
+  L.push(`H2FPEF: ${s.h2Total}/9${s.h2Complete?` → ${s.h2CatTxt} (≈${s.prob} %)`:' (incompleto)'}  [H${s.h2.heavy??'?'} H${s.h2.hyper} F${s.h2.af} P${s.h2.ph??'?'} E${s.h2.elder??'?'} F${s.h2.fill??'?'}]`);
+  L.push(`HFA-PEFF dominio eco: ${s.hfaTotal}/4${s.hfaComplete?'':' (incompleto)'}  [funcional ${s.fMaj?'mayor':s.fMin?'menor':'0'}; morfológico ${s.mMaj?'mayor':s.mMin?'menor':'0'}]  – pendiente NT-proBNP`);
+  L.push('');
+  L.push('CONCLUSIÓN');
+  L.push(s.final?`${s.vTxt[s.final][0].toUpperCase()}. ${s.vTxt[s.final][1]}`:'Clasificación pendiente (datos insuficientes).');
+  if($('plan').value)L.push(`Conducta: ${$('plan').value}`);
+  L.push('');
+  L.push('Ecocardioscopia dirigida de tamizaje; no reemplaza un ecocardiograma transtorácico completo.');
+  return L.join('\n');
+}
+
+// ---- Registro local
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+function save(a){try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){toast('No se pudo guardar en este navegador')}}
+function render(){
+  const a=load(); const tb=$('regTable').querySelector('tbody');
+  const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  tb.innerHTML=a.map((r,i)=>`<tr><td>${esc(r.fecha)}</td><td>${esc(r.nombre)}</td><td>${esc(r.doc)}</td><td>${esc(r.edad)}</td><td>${esc(r.imc)}</td><td>${esc(r.h2)}</td><td>${esc(r.hfa)}</td><td>${esc(r.clasif)}</td><td>${r.campos?`<button type="button" data-open="${i}">Abrir</button> `:''}<button type="button" data-copy="${i}">Copiar</button> <button type="button" data-del="${i}">Borrar</button></td></tr>`).join('');
+  $('regCount').textContent=a.length?`· ${a.length} registrados`:'';
+}
+
+// ---- Instantánea del formulario (para reabrir un paciente)
+function snapshot(){
+  const o={};
+  $('form').querySelectorAll('input,select,textarea').forEach(el=>{
+    if(el.readOnly)return;
+    if(el.type==='radio'){if(el.checked)o['r:'+el.name]=el.value}
+    else if(el.type==='checkbox'){if(el.checked)o[el.id]=true}
+    else if(el.id&&el.value!=='')o[el.id]=el.value;
+  });
+  return o;
+}
+function restore(o){
+  $('form').reset();
+  Object.entries(o).forEach(([k,v])=>{
+    if(k.startsWith('r:')){const r=document.querySelector(`input[name="${k.slice(2)}"][value="${v}"]`);if(r)r.checked=true}
+    else{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=!!v;else el.value=v}
+  });
+  calc(); window.scrollTo({top:0});
+}
+
+// ---- Entrega de archivos: capacidad de descarga del visor o, fuera de él (GitHub Pages), enlace directo
+const dlP=(window.claude&&typeof window.claude.use==='function')?window.claude.use('downloads').catch(()=>null):Promise.resolve(null);
+async function entregar(data,filename){
+  const dl=await dlP;
+  if(dl){
+    try{await dl.save({filename,data});toast('Archivo descargado');return}
+    catch(e){
+      const c=e&&e.code;
+      if(c==='declined'){toast('Descarga cancelada');return}
+      if(c==='rate_limited'){toast('Ya hay una descarga pendiente');return}
+      if(c==='too_large'||c==='bad_request'){toast('No se pudo generar el archivo');return}
+    }
+  }
+  const blob=data instanceof Blob?data:new Blob([data]);
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);toast('Archivo descargado');
+}
+
+// ---- PDF imprimible (carta)
+function generarPDF(){
+  const s=calc();
+  if(!window.jspdf){toast('No se pudo cargar el generador de PDF; revise la conexión');return}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'letter'});
+  const W=215.9,H=279.4,M=14,CW=W-2*M;
+  const NAVY=[13,43,69],GOLD=[196,146,58],GREY=[95,112,130],INK=[22,32,44],LINE=[205,214,224],SOFT=[244,246,249];
+  const CATC={baja:[31,138,90],intermedia:[176,122,18],alta:[194,71,58]};
+  const S=t=>String(t??'').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≈/g,'~').replace(/[–—]/g,'-').replace(/₂/g,'2').replace(/²/g,'2').replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
+  const u=(v,unit)=>(v===''||v==null)?'':`${v} ${unit}`;
+  const yes=l=>l.filter(([id])=>chk(id)).map(([,t])=>t).join(', ');
+  const fecha=$('fecha').value||hoy();
+  let y;
+
+  // Encabezado
+  doc.setFillColor(...NAVY);doc.rect(0,0,W,22,'F');
+  doc.setFillColor(...GOLD);doc.rect(0,22,W,1.1,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13.5);
+  doc.text('Instituto Neumológico del Oriente',M,10);
+  doc.setTextColor(...GOLD);doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text('Programa Integral de Obesidad',M,16.2);
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(9.5);
+  doc.text('Tamizaje de ICFEp · Ecocardioscopia dirigida',W-M,10,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Fecha: '+fecha,W-M,16.2,{align:'right'});
+  y=30;
+
+  const ensure=h=>{if(y+h>H-15){doc.addPage();y=18;}};
+  const sec=t=>{y+=1.5;ensure(16);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...NAVY);doc.text(S(t).toUpperCase(),M,y);doc.setDrawColor(...GOLD);doc.setLineWidth(0.4);doc.line(M,y+1.6,W-M,y+1.6);y+=6.2;};
+  const sub=t=>{ensure(12);doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GREY);doc.text(S(t).toUpperCase(),M,y);y+=4;};
+  const grid=(pairs,cols=4)=>{
+    const p=pairs.filter(x=>x[1]!==''&&x[1]!=null);
+    if(!p.length){doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(...GREY);doc.text('Sin datos registrados',M,y);y+=6;return}
+    const cw=CW/cols;
+    for(let i=0;i<p.length;i+=cols){
+      ensure(10);
+      p.slice(i,i+cols).forEach(([k,v],j)=>{const x=M+j*cw;
+        doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...GREY);doc.text(S(k),x,y);
+        doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...INK);doc.text(doc.splitTextToSize(S(v),cw-3)[0],x,y+4.3);});
+      y+=8.3;
+    }
+  };
+  const row=(label,text)=>{if(!text)return;doc.setFontSize(8.5);const lines=doc.splitTextToSize(S(text),CW-34);ensure(lines.length*3.8+2);
+    doc.setFont('helvetica','bold');doc.setTextColor(...GREY);doc.text(S(label),M,y);
+    doc.setFont('helvetica','normal');doc.setTextColor(...INK);doc.text(lines,M+34,y);y+=lines.length*3.8+1.4;};
+
+  sec('1. Identificación y antropometría');
+  grid([['Nombre',$('nombre').value],['Documento',$('doc').value],['Teléfono',$('tel').value]],3);
+  grid([['Edad',u(s.edad,'años')],['Sexo',s.sexo==='F'?'Femenino':s.sexo==='M'?'Masculino':''],['Peso',u($('peso').value,'kg')],['Talla',u($('talla').value,'cm')],
+    ['IMC',u(fmt(s.imc),'kg/m²')],['Superficie corporal',u(fmt(s.bsa,2),'m²')],['Perímetro abdominal',u($('cintura').value,'cm')],
+    ['Presión arterial',($('pas').value&&$('pad').value)?`${$('pas').value}/${$('pad').value} mmHg`:''],['Frecuencia cardíaca',u($('fc').value,'lpm')],['SpO2',u($('spo2').value,'%')]],5);
+
+  sec('2. Encuesta clínica');
+  row('Clase funcional',radio('nyha')?`NYHA ${radio('nyha')}${$('tiempoSint').value?` · ${$('tiempoSint').value} meses de evolución`:''}`:'');
+  row('Síntomas',yes([['ortopnea','ortopnea'],['dpn','disnea paroxística nocturna'],['edema','edema de miembros inferiores'],['fatiga','fatiga'],['palpit','palpitaciones'],['ronquido','ronquido / apnea']])||'Ninguno referido');
+  row('Antecedentes',yes([['hta','HTA'],['dm','diabetes'],['fa','fibrilación auricular'],['erc','ERC'],['ecv','enfermedad coronaria'],['saos','SAHOS']])||'Ninguno referido');
+  row('Tratamiento',[`Antihipertensivos: ${$('nAntiHTA').selectedOptions[0].text}`,`diurético: ${chk('diuretico')?'sí':'no'}`,$('glp1').value?`obesidad: ${$('glp1').value}`:''].filter(Boolean).join(' · '));
+  row('Exploración',yes([['ingurg','ingurgitación yugular'],['crepitos','crépitos'],['s3','tercer ruido']])||'Sin signos congestivos');
+  y+=1;
+
+  sec('3. Ecocardioscopia dirigida');
+  sub('Ventrículo izquierdo');
+  grid([['FEVI',u($('fevi').value,'%')],['SIV diástole',u($('sivd').value,'mm')],['Pared posterior',u($('ppd').value,'mm')],['DTDVI',u($('dvid').value,'mm')],
+    ['Masa VI',u(fmt(s.mvi,0),'g')],['Índice de masa VI',u(fmt(s.imvi,0),'g/m²')],['Grosor parietal relativo',fmt(s.gpr,2)],['Strain longitudinal global',u($('gls').value,'%')]]);
+  sub('Función diastólica');
+  grid([['Onda E',u($('ondaE').value,'cm/s')],['Onda A',u($('ondaA').value,'cm/s')],['E/A',fmt(s.ea,2)],["e' septal",u($('eSep').value,'cm/s')],
+    ["e' lateral",u($('eLat').value,'cm/s')],["E/e' promedio",fmt(s.ee)],['Volumen AI',u($('lavol').value,'mL')],['VAI indexado',u(fmt(s.lavi,0),'mL/m²')]]);
+  sub('Presiones pulmonares y cavidades derechas');
+  grid([['Velocidad máx. IT',u($('vit').value,'m/s')],['VCI',u($('vci').value,'mm')],['Colapso VCI',radio('colapso')==null?'':radio('colapso')==='si'?'> 50 %':'< 50 %'],['PAD estimada',u(s.padE,'mmHg')],
+    ['PSAP estimada',u(fmt(s.psap,0),'mmHg')],['TAPSE',u($('tapse').value,'mm')],['VD basal',u($('vdbasal').value,'mm')]]);
+  row('Otros hallazgos',yes([['derrame','derrame pericárdico'],['valvulo','valvulopatía >= moderada'],['alterSeg','alteración segmentaria de la contractilidad'],['lineasB','líneas B pulmonares bilaterales'],['malaVentana','ventana acústica limitada']]));
+  row('Observaciones',$('obs').value.trim());
+  y+=1;
+
+  sec('4. Puntajes de probabilidad');
+  ensure(30);
+  const bw=(CW-6)/2,bh=24;
+  const box=(x,eyebrow,big,max,cat,detail)=>{
+    doc.setFillColor(...SOFT);doc.setDrawColor(...LINE);doc.setLineWidth(0.3);doc.roundedRect(x,y,bw,bh,1.5,1.5,'FD');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...GOLD);doc.text(S(eyebrow).toUpperCase(),x+4,y+5.5);
+    doc.setFontSize(19);doc.setTextColor(...NAVY);doc.text(S(big),x+4,y+13.5);
+    const bwid=doc.getTextWidth(S(big));doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...GREY);doc.text(' / '+max,x+4+bwid,y+13.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...INK);doc.text(doc.splitTextToSize(S(cat),bw-8)[0],x+4,y+18.3);
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(...GREY);doc.text(doc.splitTextToSize(S(detail),bw-8)[0],x+4,y+22.3);
+  };
+  const g=v=>v==null?'?':v;
+  box(M,'H2FPEF (Reddy 2018)',$('h2Total').textContent,9,$('h2Cat').textContent,
+    `IMC ${g(s.h2.heavy)} · HTA ${s.h2.hyper} · FA ${s.h2.af} · PSAP ${g(s.h2.ph)} · Edad ${g(s.h2.elder)} · E/e' ${g(s.h2.fill)}`);
+  box(M+bw+6,'HFA-PEFF · dominio eco',$('hfaTotal').textContent,4,$('hfaCat').textContent,
+    `Funcional: ${s.fMaj?'mayor (2)':s.fMin?'menor (1)':'0'} · Morfológico: ${s.mMaj?'mayor (2)':s.mMin?'menor (1)':'0'} · sin NT-proBNP`);
+  y+=bh+3;
+  if(!s.h2Complete||!s.hfaComplete){doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(...GREY);doc.text('* Puntaje parcial: faltan datos para completarlo.',M,y);y+=4;}
+  y+=1;
+
+  sec('5. Conclusión y conducta');
+  const titulo=s.final?s.vTxt[s.final][0]+($('form').querySelector('input[name="clasif"]:checked').value!=='auto'?' (asignada manualmente)':''):'Clasificación pendiente';
+  const texto=s.final?s.vTxt[s.final][1]:'Datos insuficientes para clasificar.';
+  doc.setFontSize(8.8);const tl=doc.splitTextToSize(S(texto),CW-10);const ch=9+tl.length*3.9;
+  ensure(ch+4);
+  const col=s.final?CATC[s.final]:GOLD;
+  doc.setFillColor(...SOFT);doc.rect(M,y,CW,ch,'F');doc.setFillColor(...col);doc.rect(M,y,1.6,ch,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...col);doc.text(S(titulo),M+6,y+6.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(8.8);doc.setTextColor(...INK);doc.text(tl,M+6,y+11);
+  y+=ch+4;
+  // Conducta (mitad izquierda) y firma (mitad derecha) en la misma franja
+  ensure(18);
+  const y0=y, half=CW/2-6;
+  if($('plan').value){doc.setFontSize(8.5);const cl=doc.splitTextToSize(S($('plan').value),half);
+    doc.setFont('helvetica','bold');doc.setTextColor(...GREY);doc.text('CONDUCTA',M,y0);
+    doc.setFont('helvetica','normal');doc.setTextColor(...INK);doc.text(cl,M,y0+4.5);}
+  const sx=M+CW/2+6, sy=y0+9;
+
+  // Firma
+  doc.setDrawColor(...INK);doc.setLineWidth(0.3);doc.line(sx,sy,W-M,sy);
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...INK);doc.text(S($('medico').value||' '),sx,sy+4.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...GREY);doc.text('Firma y registro médico',sx,sy+8.5);
+  y=sy+10;
+
+  // Pie en cada página
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){doc.setPage(i);
+    doc.setDrawColor(...LINE);doc.setLineWidth(0.3);doc.line(M,H-13,W-M,H-13);
+    doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...GREY);
+    doc.text('Ecocardioscopia dirigida de tamizaje; no reemplaza un ecocardiograma transtorácico completo.',M,H-9);
+    doc.text(S(`${$('nombre').value||''}${$('doc').value?' · '+$('doc').value:''}  ·  Pág. ${i}/${n}`),W-M,H-9,{align:'right'});}
+
+  const id=($('doc').value||$('nombre').value||'paciente').trim().replace(/[^\wÁÉÍÓÚáéíóúÑñ-]+/g,'_');
+  entregar(doc.output('blob'),`Tamizaje_ICFEp_${id}_${fecha}.pdf`);
+}
+function toCsv(a){
+  const h=['fecha','nombre','documento','telefono','edad','sexo','imc','pas','pad','nyha','hta','dm','fa','diuretico','n_antihta','fevi','imvi','gpr','e_e_prom','lavi','vit','psap','h2fpef','hfa_eco','clasificacion','conducta'];
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  return [h.join(';'),...a.map(r=>[r.fecha,r.nombre,r.doc,r.tel,r.edad,r.sexo,r.imc,r.pas,r.pad,r.nyha,r.hta,r.dm,r.fa,r.diur,r.nanti,r.fevi,r.imvi,r.gpr,r.ee,r.lavi,r.vit,r.psap,r.h2,r.hfa,r.clasif,r.plan].map(esc).join(';'))].join('\n');
+}
+function guardar(){
+  const s=calc();
+  const r={fecha:$('fecha').value,nombre:$('nombre').value,doc:$('doc').value,tel:$('tel').value,edad:s.edad,sexo:s.sexo,imc:fmt(s.imc),pas:$('pas').value,pad:$('pad').value,nyha:radio('nyha')||'',hta:chk('hta')?1:0,dm:chk('dm')?1:0,fa:chk('fa')?1:0,diur:chk('diuretico')?1:0,nanti:$('nAntiHTA').value,fevi:$('fevi').value,imvi:fmt(s.imvi,0),gpr:fmt(s.gpr,2),ee:fmt(s.ee),lavi:fmt(s.lavi,0),vit:$('vit').value,psap:fmt(s.psap,0),
+    h2:$('h2Total').textContent,hfa:$('hfaTotal').textContent,clasif:s.final||'pendiente',plan:$('plan').value,informe:$('out').textContent,campos:snapshot()};
+  const a=load(); const idx=a.findIndex(x=>r.doc&&x.doc===r.doc); if(idx>=0)a[idx]=r; else a.push(r);
+  save(a); render(); toast(idx>=0?'Registro actualizado':'Paciente guardado');
+}
+async function copy(t,msg){
+  try{await navigator.clipboard.writeText(t);toast(msg||'Copiado')}
+  catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast(msg||'Copiado')}catch(x){toast('Seleccione y copie el texto manualmente')}ta.remove()}
+}
+let tt; function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
+function nuevo(){ $('form').reset(); $('fecha').value=hoy(); document.querySelectorAll('.calc').forEach(i=>i.value=''); calc(); window.scrollTo({top:0}); $('nombre').focus(); }
+function hoy(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+
+$('form').addEventListener('input',calc); $('form').addEventListener('change',calc);
+$('btnCopiar').addEventListener('click',()=>copy($('out').textContent,'Informe copiado'));
+$('btnGuardar').addEventListener('click',guardar);
+$('btnNuevo').addEventListener('click',nuevo);
+$('btnCsv').addEventListener('click',()=>copy(toCsv(load()),'CSV copiado'));
+$('btnCsvDl').addEventListener('click',()=>{const a=load();if(!a.length){toast('El registro está vacío');return}entregar('﻿'+toCsv(a),`tamizaje_icfep_${hoy()}.csv`)});
+$('btnPdf').addEventListener('click',generarPDF);
+$('btnLimpiar').addEventListener('click',e=>{const b=e.currentTarget; if(b.dataset.arm){save([]);render();delete b.dataset.arm;b.textContent='Vaciar registro';toast('Registro vaciado')}else{b.dataset.arm='1';b.textContent='Confirmar vaciado';setTimeout(()=>{delete b.dataset.arm;b.textContent='Vaciar registro'},3000)}});
+$('regTable').addEventListener('click',e=>{const c=e.target.dataset.copy,d=e.target.dataset.del,o=e.target.dataset.open; if(o!=null){restore(load()[o].campos);toast('Paciente cargado')} if(c!=null)copy(load()[c].informe,'Informe copiado'); if(d!=null){const a=load();a.splice(d,1);save(a);render()}});
+
+$('fecha').value=hoy(); render(); calc();
+})();
+</script>
